@@ -11,7 +11,7 @@ import simplejson
 import random
 import os
 
-def download_file(file_name,file_mode,base_url):
+def download_file(file_name,file_mode,base_url,out):
 	from urllib2 import Request, urlopen, URLError, HTTPError
 
 	#create the url and the request
@@ -24,7 +24,11 @@ def download_file(file_name,file_mode,base_url):
 		print "downloading " + url
 
 		# Open our local file for writing
-		local_file = open(file_name, "w" + file_mode)
+		if out != "":
+			local_file = open(out + file_name, "w" + file_mode)
+		else:
+			local_file = open(file_name, "w" + file_mode)
+
 		#Write to our local file
 		local_file.write(f.read())
 		local_file.close()
@@ -50,18 +54,18 @@ def random_start():
     value = random.randrange(0, 15, 5)
     return value
 
-def grab_files(urls):
+def grab_files(urls, out):
 	print "====== DOWNLOADING FILES ======"
 	count = 0
 	for url in urls:
 		parts = url.split("/")
 		filename = parts[-1]
-		download_file(filename,"b",url)
+		download_file(filename,"b",url,out)
 		count+=1
     
 	print "%d files downloaded" % (count)
 
-def get_urls(file_type="pdf", amount=10, search="query", random=False):
+def get_urls(file_type="pdf", amount=10, search="query", randomq=False):
     count = 0
     url_list = []
     runtime = amount / 5
@@ -69,12 +73,14 @@ def get_urls(file_type="pdf", amount=10, search="query", random=False):
     while count < runtime:
         
         start = random_start()
-        if random == True:
+        if randomq == True:
             search = random_word('dictionary.txt')
 
         #construct the query
+        ip = str(random.randrange(1,254)) + "." + str(random.randrange(1,254)) + "." + str(random.randrange(1,254)) + "." + str(random.randrange(1,254))
         query = urllib.urlencode({'q' : '%s filetype:%s' % (search, file_type)})
-        url = 'http://ajax.googleapis.com/ajax/services/search/web?v=1.0&rsz=5&start=%s&%s' % (start,query)
+        url = 'http://ajax.googleapis.com/ajax/services/search/web?v=1.0&userip=%s&rsz=5&start=%s&%s' % (ip,start,query)
+        print "====== Seed Query: " + query + " ====="
         search_results = urllib.urlopen(url)
         json = simplejson.loads(search_results.read())
         results = json['responseData']['results']
@@ -89,18 +95,12 @@ def main():
     oParser.add_option('-a', '--amount', default='10', type='int', help='amount of files to download')
     oParser.add_option('-q', '--query', default='', type='string', help='search value')
     oParser.add_option('-r', '--random', action='store_true', default=False, help='file full of random search values')
-    oParser.add_option('-s', '--scan', action='store_true', default=False, help='scan downloaded files')
+    oParser.add_option('-o', '--out', default='', type='string', help='output directory')
     (options, args) = oParser.parse_args()
 
     if options.type:
         urls = get_urls(options.type, options.amount, options.query, options.random)
-        grab_files(urls)
-        if options.scan:
-            print "====== SCANNING DOWNLOADED FILES ======"
-            dirlist = os.listdir('/tmp')
-            for fname in dirlist:
-                os.system('python pdfid.py -De %s' % ('/tmp/' + fname))
-                os.remove('/tmp/' + fname)
+        grab_files(urls, options.out)
     else:
         oParser.print_help()
         return
