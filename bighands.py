@@ -11,6 +11,30 @@ import simplejson
 import random
 import os
 
+def download_file(file_name,file_mode,base_url):
+	from urllib2 import Request, urlopen, URLError, HTTPError
+
+	#create the url and the request
+	url = base_url
+	req = Request(url)
+
+	# Open the url
+	try:
+		f = urlopen(req)
+		print "downloading " + url
+
+		# Open our local file for writing
+		local_file = open(file_name, "w" + file_mode)
+		#Write to our local file
+		local_file.write(f.read())
+		local_file.close()
+
+	#handle errors
+	except HTTPError, e:
+		print "HTTP Error:",e.code , url
+	except URLError, e:
+		print "URL Error:",e.reason , url
+
 def random_word(filename):
     filesize = os.stat(filename)[6]
     fd = file(filename,'rb')
@@ -27,12 +51,15 @@ def random_start():
     return value
 
 def grab_files(urls):
-    print "====== DOWNLOADING FILES ======"
-    count = 0
-    for url in urls:
-        os.system('wget -t 1 -P /tmp ' + url)
-        count+=1
-    print "%d files downloaded" % (count)
+	print "====== DOWNLOADING FILES ======"
+	count = 0
+	for url in urls:
+		parts = url.split("/")
+		filename = parts[-1]
+		download_file(filename,"b",url)
+		count+=1
+    
+	print "%d files downloaded" % (count)
 
 def get_urls(file_type="pdf", amount=10, search="query", random=False):
     count = 0
@@ -49,7 +76,7 @@ def get_urls(file_type="pdf", amount=10, search="query", random=False):
         query = urllib.urlencode({'q' : '%s filetype:%s' % (search, file_type)})
         url = 'http://ajax.googleapis.com/ajax/services/search/web?v=1.0&rsz=5&start=%s&%s' % (start,query)
         search_results = urllib.urlopen(url)
-	json = simplejson.loads(search_results.read())
+        json = simplejson.loads(search_results.read())
         results = json['responseData']['results']
         for i in results:
             url_list.append(i['url'])
